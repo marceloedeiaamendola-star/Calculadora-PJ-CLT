@@ -44,18 +44,18 @@ jobs:
             h2 { font-size: 1.35rem !important; line-height: 1.12 !important; }
             h3 { font-size: 1.05rem !important; }
             p { font-size: .88rem !important; line-height: 1.3 !important; }
-            .mobile-hero { padding: 17px 20px !important; margin: 10px 0 12px !important; border-radius: 22px !important; min-height: 0 !important; }
-            .mobile-hero h1 { font-size: clamp(2rem, 8.5vw, 2.6rem) !important; line-height: 1.02 !important; margin: 7px 0 9px !important; }
-            .mobile-hero p { font-size: .88rem !important; line-height: 1.28 !important; margin: 5px 0 !important; }
+            .mobile-hero { padding: 10px 16px !important; margin: 7px 0 9px !important; border-radius: 18px !important; min-height: 0 !important; max-height: 225px !important; overflow: hidden !important; }
+            .mobile-hero h1 { font-size: clamp(1.65rem, 7vw, 2.05rem) !important; line-height: 1.02 !important; margin: 4px 0 6px !important; }
+            .mobile-hero p { font-size: .78rem !important; line-height: 1.2 !important; margin: 3px 0 !important; }
             .mobile-hero .mobile-kicker { display: none !important; }
             .mobile-step { padding: 9px 5px !important; min-height: 0 !important; border-radius: 15px !important; }
             .mobile-step * { font-size: .78rem !important; line-height: 1.12 !important; }
             button, input, select, textarea { font-size: .9rem !important; }
           }
           @media (max-width: 600px) and (max-height: 850px) {
-            .mobile-hero { padding: 14px 18px !important; margin: 8px 0 10px !important; }
-            .mobile-hero h1 { font-size: clamp(1.9rem, 8vw, 2.35rem) !important; margin: 5px 0 7px !important; }
-            .mobile-hero p { font-size: .84rem !important; }
+            .mobile-hero { padding: 8px 14px !important; margin: 6px 0 8px !important; max-height: 205px !important; }
+            .mobile-hero h1 { font-size: clamp(1.55rem, 6.5vw, 1.9rem) !important; margin: 3px 0 5px !important; }
+            .mobile-hero p { font-size: .74rem !important; }
           }
           </style>"""
           script = """<script id="iphone-compact-layout-script">
@@ -89,7 +89,7 @@ jobs:
                   const kicker = Array.from(node.querySelectorAll('*')).find(el => el.children.length === 0 && /simulador de remuneração/i.test(norm(el.textContent)));
                   if (kicker) kicker.classList.add('mobile-kicker');
                   const paragraphs = Array.from(node.querySelectorAll('p'));
-                  if (paragraphs.length) paragraphs[paragraphs.length - 1].textContent = 'Compare renda líquida, benefícios e FGTS entre CLT e PJ.';
+                  if (paragraphs.length) paragraphs[paragraphs.length - 1].textContent = 'Compare CLT e PJ.';
                   break;
                 }
               }
@@ -125,8 +125,10 @@ jobs:
             }
           });
           </script>"""
-          s = s.replace("</head>", style + "\\n</head>", 1) if "</head>" in s else style + s
-          s = s.replace("</body>", script + "\\n</body>", 1) if "</body>" in s else s + script
+          s = s.replace(chr(92) + "n</head>", chr(10) + "</head>")
+          s = s.replace(chr(92) + "n</body>", chr(10) + "</body>")
+          s = s.replace("</head>", style + chr(10) + "</head>", 1) if "</head>" in s else style + s
+          s = s.replace("</body>", script + chr(10) + "</body>", 1) if "</body>" in s else s + script
           p.write_text(s)
       - name: Configure Pages
         uses: actions/configure-pages@v5
