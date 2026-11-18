@@ -26,6 +26,92 @@ jobs:
       - name: Restore site HTML
         run: |
           cat site/chunks/*.txt | base64 -d | gzip -d > index.html
+      - name: Apply iPhone layout refinements
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("index.html")
+          s = p.read_text()
+          style = """<style id="iphone-compact-layout">
+          @media (max-width: 600px) {
+            html { font-size: 14px; }
+            body { font-size: 14px; }
+            header { padding: 10px 16px !important; min-height: 0 !important; }
+            header svg { width: 48px !important; height: 48px !important; }
+            h1 { font-size: clamp(2.15rem, 9vw, 3rem) !important; line-height: 1.05 !important; }
+            h2 { font-size: clamp(1.35rem, 5.5vw, 1.7rem) !important; line-height: 1.15 !important; }
+            h3 { font-size: 1.1rem !important; }
+            p { font-size: .95rem !important; line-height: 1.45 !important; }
+            .mobile-hero { padding: 24px !important; margin: 20px 0 !important; border-radius: 26px !important; min-height: 0 !important; }
+            .mobile-hero h1 { font-size: clamp(2.45rem, 10vw, 3.2rem) !important; line-height: 1.03 !important; margin: 14px 0 18px !important; }
+            .mobile-hero p { font-size: 1rem !important; line-height: 1.45 !important; }
+            .mobile-step { padding: 12px 7px !important; min-height: 0 !important; border-radius: 18px !important; }
+            .mobile-step * { font-size: .88rem !important; line-height: 1.2 !important; }
+            button, input, select, textarea { font-size: .95rem !important; }
+          }
+          @media (max-width: 600px) and (max-height: 850px) {
+            .mobile-hero { padding: 20px !important; margin: 14px 0 !important; }
+            .mobile-hero h1 { font-size: clamp(2.25rem, 9vw, 2.8rem) !important; margin: 10px 0 14px !important; }
+            .mobile-hero p { font-size: .92rem !important; }
+          }
+          </style>"""
+          script = """<script id="iphone-compact-layout-script">
+          document.addEventListener('DOMContentLoaded', function () {
+            const norm = s => (s || '').replace(/\\s+/g, ' ').trim();
+            const heading = Array.from(document.querySelectorAll('h1,h2')).find(el => /quanto vale\\s+seu trabalho/i.test(norm(el.textContent)));
+            if (heading) {
+              let node = heading;
+              for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
+                const cs = getComputedStyle(node);
+                const bg = cs.backgroundColor;
+                const rect = node.getBoundingClientRect();
+                if (rect.width > innerWidth * .75 && rect.height > 180 && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                  node.classList.add('mobile-hero');
+                  break;
+                }
+              }
+            }
+            const labels = ['Comparação', 'Configuração PJ', 'Resultado', 'Memória'];
+            for (const label of labels) {
+              const el = Array.from(document.querySelectorAll('body *')).find(x => x.children.length === 0 && norm(x.textContent) === label);
+              if (!el) continue;
+              let node = el;
+              for (let i = 0; i < 4 && node; i++, node = node.parentElement) {
+                const rect = node.getBoundingClientRect();
+                if (rect.width > 55 && rect.width < innerWidth * .55 && rect.height > 35) {
+                  node.classList.add('mobile-step');
+                  break;
+                }
+              }
+            }
+            const salary = Array.from(document.querySelectorAll('input')).find(input => {
+              const labelText = [
+                input.id, input.name, input.getAttribute('aria-label'),
+                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
+                input.parentElement ? input.parentElement.innerText : '',
+                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
+              ].join(' ');
+              return /sal[aá]rio/i.test(labelText);
+            });
+            if (salary) {
+              salary.value = '';
+              salary.defaultValue = '';
+              salary.removeAttribute('value');
+              salary.dispatchEvent(new Event('input', { bubbles: true }));
+              salary.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          });
+          </script>"""
+          if "iphone-compact-layout" not in s:
+            if "</head>" in s:
+              s = s.replace("</head>", style + "\n</head>", 1)
+            else:
+              s = style + s
+            if "</body>" in s:
+              s = s.replace("</body>", script + "\n</body>", 1)
+            else:
+              s += script
+          p.write_text(s)
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
