@@ -26,47 +26,70 @@ jobs:
       - name: Restore site HTML
         run: |
           cat site/chunks/*.txt | base64 -d | gzip -d > index.html
-      - name: Apply iPhone layout refinements
+      - name: Apply compact iPhone first-screen layout
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path("index.html")
           s = p.read_text()
+          s = re.sub(r'<style id="iphone-compact-layout">.*?</style>', '', s, flags=re.S)
+          s = re.sub(r'<script id="iphone-compact-layout-script">.*?</script>', '', s, flags=re.S)
           style = """<style id="iphone-compact-layout">
           @media (max-width: 600px) {
-            html { font-size: 14px; }
-            body { font-size: 14px; }
-            header { padding: 10px 16px !important; min-height: 0 !important; }
-            header svg { width: 48px !important; height: 48px !important; }
-            h1 { font-size: clamp(2.15rem, 9vw, 3rem) !important; line-height: 1.05 !important; }
-            h2 { font-size: clamp(1.35rem, 5.5vw, 1.7rem) !important; line-height: 1.15 !important; }
-            h3 { font-size: 1.1rem !important; }
-            p { font-size: .95rem !important; line-height: 1.45 !important; }
-            .mobile-hero { padding: 24px !important; margin: 20px 0 !important; border-radius: 26px !important; min-height: 0 !important; }
-            .mobile-hero h1 { font-size: clamp(2.45rem, 10vw, 3.2rem) !important; line-height: 1.03 !important; margin: 14px 0 18px !important; }
-            .mobile-hero p { font-size: 1rem !important; line-height: 1.45 !important; }
-            .mobile-step { padding: 12px 7px !important; min-height: 0 !important; border-radius: 18px !important; }
-            .mobile-step * { font-size: .88rem !important; line-height: 1.2 !important; }
-            button, input, select, textarea { font-size: .95rem !important; }
+            html { font-size: 13px; }
+            body { font-size: 13px; }
+            header { display: none !important; }
+            h1 { font-size: clamp(1.9rem, 8vw, 2.45rem) !important; line-height: 1.02 !important; }
+            h2 { font-size: 1.35rem !important; line-height: 1.12 !important; }
+            h3 { font-size: 1.05rem !important; }
+            p { font-size: .88rem !important; line-height: 1.3 !important; }
+            .mobile-hero { padding: 17px 20px !important; margin: 10px 0 12px !important; border-radius: 22px !important; min-height: 0 !important; }
+            .mobile-hero h1 { font-size: clamp(2rem, 8.5vw, 2.6rem) !important; line-height: 1.02 !important; margin: 7px 0 9px !important; }
+            .mobile-hero p { font-size: .88rem !important; line-height: 1.28 !important; margin: 5px 0 !important; }
+            .mobile-hero .mobile-kicker { display: none !important; }
+            .mobile-step { padding: 9px 5px !important; min-height: 0 !important; border-radius: 15px !important; }
+            .mobile-step * { font-size: .78rem !important; line-height: 1.12 !important; }
+            button, input, select, textarea { font-size: .9rem !important; }
           }
           @media (max-width: 600px) and (max-height: 850px) {
-            .mobile-hero { padding: 20px !important; margin: 14px 0 !important; }
-            .mobile-hero h1 { font-size: clamp(2.25rem, 9vw, 2.8rem) !important; margin: 10px 0 14px !important; }
-            .mobile-hero p { font-size: .92rem !important; }
+            .mobile-hero { padding: 14px 18px !important; margin: 8px 0 10px !important; }
+            .mobile-hero h1 { font-size: clamp(1.9rem, 8vw, 2.35rem) !important; margin: 5px 0 7px !important; }
+            .mobile-hero p { font-size: .84rem !important; }
           }
           </style>"""
           script = """<script id="iphone-compact-layout-script">
           document.addEventListener('DOMContentLoaded', function () {
             const norm = s => (s || '').replace(/\\s+/g, ' ').trim();
+            const isMobile = matchMedia('(max-width: 600px)').matches;
+            if (isMobile) {
+              const brand = Array.from(document.querySelectorAll('body *')).find(el =>
+                el.children.length === 0 && /CLT-PJ Calculator/i.test(norm(el.textContent))
+              );
+              if (brand) {
+                let node = brand;
+                for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
+                  const r = node.getBoundingClientRect();
+                  if (r.width > innerWidth * .8 && r.height > 45 && r.height < 240) {
+                    node.style.setProperty('display', 'none', 'important');
+                    break;
+                  }
+                }
+              }
+            }
             const heading = Array.from(document.querySelectorAll('h1,h2')).find(el => /quanto vale\\s+seu trabalho/i.test(norm(el.textContent)));
             if (heading) {
               let node = heading;
-              for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
+              for (let i = 0; i < 6 && node; i++, node = node.parentElement) {
                 const cs = getComputedStyle(node);
                 const bg = cs.backgroundColor;
                 const rect = node.getBoundingClientRect();
-                if (rect.width > innerWidth * .75 && rect.height > 180 && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                if (rect.width > innerWidth * .75 && rect.height > 150 && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
                   node.classList.add('mobile-hero');
+                  const kicker = Array.from(node.querySelectorAll('*')).find(el => el.children.length === 0 && /simulador de remuneração/i.test(norm(el.textContent)));
+                  if (kicker) kicker.classList.add('mobile-kicker');
+                  const paragraphs = Array.from(node.querySelectorAll('p'));
+                  if (paragraphs.length) paragraphs[paragraphs.length - 1].textContent = 'Compare renda líquida, benefícios e FGTS entre CLT e PJ.';
                   break;
                 }
               }
@@ -102,15 +125,8 @@ jobs:
             }
           });
           </script>"""
-          if "iphone-compact-layout" not in s:
-            if "</head>" in s:
-              s = s.replace("</head>", style + "\n</head>", 1)
-            else:
-              s = style + s
-            if "</body>" in s:
-              s = s.replace("</body>", script + "\n</body>", 1)
-            else:
-              s += script
+          s = s.replace("</head>", style + "\\n</head>", 1) if "</head>" in s else style + s
+          s = s.replace("</body>", script + "\\n</body>", 1) if "</body>" in s else s + script
           p.write_text(s)
       - name: Configure Pages
         uses: actions/configure-pages@v5
