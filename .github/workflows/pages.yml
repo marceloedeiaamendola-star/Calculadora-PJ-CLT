@@ -28,6 +28,8 @@ jobs:
           cat site/chunks/*.txt | base64 -d | gzip -d > index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
