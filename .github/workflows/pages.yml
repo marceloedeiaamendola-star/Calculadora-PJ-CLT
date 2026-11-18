@@ -57,6 +57,12 @@ jobs:
           .donate-card h2 { font-size: 1.35rem; line-height: 1.3; margin: 0 0 18px; }
           .donate-card img { display: block; width: min(76vw, 300px); height: auto; margin: 0 auto 18px; image-rendering: pixelated; }
           .donate-return { border: 0; border-radius: 999px; padding: 12px 28px; background: #173454; color: white; font-size: 15px; font-weight: 600; }
+          #cltpj-mode-switch { margin: 12px 0 16px; padding: 13px; border: 1px solid #d9e1ea; border-radius: 14px; background: #fff; color: #173454; font-family: system-ui,sans-serif; }
+          #cltpj-mode-switch .mode-heading { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+          #cltpj-mode-switch .mode-buttons { display: flex; gap: 8px; }
+          #cltpj-mode-switch button { flex: 1; border: 1px solid #b9c8d8; border-radius: 10px; padding: 10px 8px; background: #f4f7fb; color: #173454; font-size: 14px; font-weight: 650; }
+          #cltpj-mode-switch button.active { background: #173454; border-color: #173454; color: white; }
+          #cltpj-mode-switch .mode-hint { margin-top: 8px; color: #617187; font-size: 11px; line-height: 1.35; }
           </style>"""
           script = """<script id="iphone-compact-layout-script">
           document.addEventListener('DOMContentLoaded', function () {
@@ -140,6 +146,60 @@ jobs:
             document.body.appendChild(screen);
             launch.addEventListener('click', () => { screen.classList.add('is-open'); });
             screen.querySelector('.donate-return').addEventListener('click', () => { screen.classList.remove('is-open'); });
+
+            // Simplified / Advanced configuration switch. It only changes visibility,
+            // preserving entered values and leaving all calculation logic untouched.
+            const modeBar = document.createElement('div');
+            modeBar.id = 'cltpj-mode-switch';
+            modeBar.innerHTML = '<div class="mode-heading">Nível de configuração</div><div class="mode-buttons"><button type="button" data-mode="simple" aria-pressed="true">Simplificado</button><button type="button" data-mode="advanced" aria-pressed="false">Avançado</button></div><div class="mode-hint">O modo simplificado mostra apenas os dados essenciais. Use Avançado para visualizar os parâmetros tributários adicionais.</div>';
+            const firstInput = document.querySelector('input, select, textarea');
+            if (firstInput) {
+              let anchorNode = firstInput;
+              for (let i = 0; i < 5 && anchorNode.parentElement; i++) {
+                const p = anchorNode.parentElement;
+                if (p.getBoundingClientRect().width > innerWidth * .75) anchorNode = p;
+                else break;
+              }
+              anchorNode.parentElement.insertBefore(modeBar, anchorNode);
+            } else {
+              document.body.insertBefore(modeBar, document.body.firstChild);
+            }
+            const advancedPattern = /munic[ií]pio|cnae|fator\\s*r|receita\\s*(bruta\\s*)?(acumulada|12\\s*meses)|rbt12|folha\\s*(de\\s*)?(pagamento|sal[aá]rios)|anexo\\s*(iii|iv|v)|hist[oó]rico\\s*(de\\s*)?(faturamento|receita)/i;
+            const fieldBlocks = [];
+            for (const control of document.querySelectorAll('input, select, textarea')) {
+              const labelText = [
+                control.id, control.name, control.getAttribute('aria-label'), control.placeholder,
+                ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : []),
+                control.parentElement ? control.parentElement.innerText : '',
+                control.parentElement?.parentElement ? control.parentElement.parentElement.innerText : ''
+              ].join(' ');
+              if (!advancedPattern.test(labelText)) continue;
+              let block = control;
+              for (let i = 0; i < 4 && block.parentElement; i++) {
+                const candidate = block.parentElement;
+                const text = norm(candidate.innerText);
+                if (text.length > 0 && text.length < 260 && candidate.querySelector('input,select,textarea') === control) {
+                  block = candidate;
+                  break;
+                }
+                block = candidate;
+              }
+              if (!fieldBlocks.includes(block)) fieldBlocks.push(block);
+            }
+            function setConfigMode(mode) {
+              const advanced = mode === 'advanced';
+              fieldBlocks.forEach(el => { el.style.display = advanced ? '' : 'none'; });
+              modeBar.querySelectorAll('button[data-mode]').forEach(btn => {
+                const active = btn.dataset.mode === mode;
+                btn.setAttribute('aria-pressed', String(active));
+                btn.classList.toggle('active', active);
+              });
+              modeBar.querySelector('.mode-hint').textContent = advanced
+                ? 'Parâmetros tributários adicionais visíveis. Os valores preenchidos são preservados.'
+                : 'Visualização essencial. Os parâmetros avançados ficam ocultos, sem apagar seus valores.';
+            }
+            modeBar.querySelectorAll('button[data-mode]').forEach(btn => btn.addEventListener('click', () => setConfigMode(btn.dataset.mode)));
+            setConfigMode('simple');
           });
           </script>"""
           s = s.replace(chr(92) + "n</head>", chr(10) + "</head>")
