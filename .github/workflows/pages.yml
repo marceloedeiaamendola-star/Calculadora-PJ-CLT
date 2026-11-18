@@ -40,58 +40,59 @@ jobs:
             html { font-size: 13px; overflow-y: auto !important; height: auto !important; }
             body { font-size: 13px; overflow-y: auto !important; overflow-x: hidden !important; height: auto !important; min-height: 100dvh !important; }
             header { display: none !important; }
-            h1 { font-size: clamp(1.9rem, 8vw, 2.45rem) !important; line-height: 1.02 !important; }
-            h2 { font-size: 1.35rem !important; line-height: 1.12 !important; }
-            h3 { font-size: 1.05rem !important; }
-            p { font-size: .88rem !important; line-height: 1.3 !important; }
-            .mobile-hero { padding: 8px 12px !important; margin: 5px 0 7px !important; border-radius: 14px !important; min-height: 0 !important; max-height: none !important; height: auto !important; overflow: visible !important; }
-            .mobile-hero h1 { display: none !important; }
-            .mobile-hero p { font-size: .72rem !important; line-height: 1.12 !important; margin: 0 !important; }
+            .mobile-hero { padding: 9px 14px !important; margin: 6px 0 8px !important; border-radius: 15px !important; min-height: 0 !important; max-height: none !important; height: auto !important; overflow: visible !important; }
+            .mobile-hero h1 { display: block !important; font-size: 1.55rem !important; line-height: 1.08 !important; margin: 0 0 3px !important; }
+            .mobile-hero p { font-size: .76rem !important; line-height: 1.15 !important; margin: 0 !important; }
             .mobile-hero .mobile-kicker { display: none !important; }
             .mobile-step { padding: 9px 5px !important; min-height: 0 !important; border-radius: 15px !important; }
             .mobile-step * { font-size: .78rem !important; line-height: 1.12 !important; }
             button, input, select, textarea { font-size: .9rem !important; }
           }
-          @media (max-width: 600px) and (max-height: 850px) {
-            .mobile-hero { padding: 7px 11px !important; margin: 4px 0 6px !important; max-height: none !important; }
-            .mobile-hero p { font-size: .7rem !important; }
-          }
+          .donate-launch { position: fixed; right: 14px; bottom: 18px; z-index: 9998; border: 0; border-radius: 999px; padding: 12px 18px; background: #173454; color: white; font: 600 15px system-ui,sans-serif; box-shadow: 0 4px 18px #0003; }
+          .donate-screen { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 22px; background: #f4f6f9; color: #172b46; font-family: system-ui,sans-serif; text-align: center; }
+          .donate-screen.is-open { display: flex; }
+          .donate-card { width: min(100%, 430px); padding: 24px 18px; background: white; border-radius: 22px; box-shadow: 0 12px 40px #10243a20; }
+          .donate-card h2 { font-size: 1.35rem; line-height: 1.3; margin: 0 0 18px; }
+          .donate-card img { display: block; width: min(76vw, 300px); height: auto; margin: 0 auto 18px; image-rendering: pixelated; }
+          .donate-return { border: 0; border-radius: 999px; padding: 12px 28px; background: #173454; color: white; font-size: 15px; font-weight: 600; }
           </style>"""
           script = """<script id="iphone-compact-layout-script">
           document.addEventListener('DOMContentLoaded', function () {
             const norm = s => (s || '').replace(/\\s+/g, ' ').trim();
-            const isMobile = matchMedia('(max-width: 600px)').matches;
-            if (isMobile) {
-              const brand = Array.from(document.querySelectorAll('body *')).find(el =>
-                el.children.length === 0 && /CLT-PJ Calculator/i.test(norm(el.textContent))
-              );
-              if (brand) {
-                let node = brand;
-                for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
-                  const r = node.getBoundingClientRect();
-                  if (r.width > innerWidth * .8 && r.height > 45 && r.height < 240) {
-                    node.style.setProperty('display', 'none', 'important');
-                    break;
-                  }
-                }
-              }
-            }
             const heading = Array.from(document.querySelectorAll('h1,h2')).find(el => /quanto vale\\s+seu trabalho/i.test(norm(el.textContent)));
             if (heading) {
               let node = heading;
               for (let i = 0; i < 6 && node; i++, node = node.parentElement) {
-                const cs = getComputedStyle(node);
-                const bg = cs.backgroundColor;
+                const bg = getComputedStyle(node).backgroundColor;
                 const rect = node.getBoundingClientRect();
-                if (rect.width > innerWidth * .75 && rect.height > 150 && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                if (rect.width > innerWidth * .75 && rect.height > 100 && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
                   node.classList.add('mobile-hero');
-                  heading.style.setProperty('display', 'none', 'important');
+                  heading.textContent = 'Calculadora PJ-CLT';
+                  heading.style.setProperty('display', 'block', 'important');
+                  heading.style.setProperty('font-size', '1.55rem', 'important');
                   const kicker = Array.from(node.querySelectorAll('*')).find(el => el.children.length === 0 && /simulador de remuneração/i.test(norm(el.textContent)));
                   if (kicker) kicker.classList.add('mobile-kicker');
                   const paragraphs = Array.from(node.querySelectorAll('p'));
                   if (paragraphs.length) paragraphs[paragraphs.length - 1].textContent = 'Compare CLT e PJ.';
                   break;
                 }
+              }
+            }
+            // Clear both CLT salary and PJ monthly billing defaults.
+            for (const input of document.querySelectorAll('input')) {
+              const context = [
+                input.id, input.name, input.getAttribute('aria-label'), input.placeholder,
+                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
+                input.parentElement ? input.parentElement.innerText : '',
+                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
+              ].join(' ');
+              if (/sal[aá]rio|faturamento/i.test(context)) {
+                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                setter.call(input, '');
+                input.defaultValue = '';
+                input.removeAttribute('value');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
               }
             }
             const labels = ['Comparação', 'Configuração PJ', 'Resultado', 'Memória'];
@@ -107,22 +108,19 @@ jobs:
                 }
               }
             }
-            const salary = Array.from(document.querySelectorAll('input')).find(input => {
-              const labelText = [
-                input.id, input.name, input.getAttribute('aria-label'),
-                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
-                input.parentElement ? input.parentElement.innerText : '',
-                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
-              ].join(' ');
-              return /sal[aá]rio/i.test(labelText);
-            });
-            if (salary) {
-              salary.value = '';
-              salary.defaultValue = '';
-              salary.removeAttribute('value');
-              salary.dispatchEvent(new Event('input', { bubbles: true }));
-              salary.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            const launch = document.createElement('button');
+            launch.className = 'donate-launch';
+            launch.type = 'button';
+            launch.textContent = '♥ Doar R$ 1';
+            const screen = document.createElement('section');
+            screen.className = 'donate-screen';
+            screen.setAttribute('role', 'dialog');
+            screen.setAttribute('aria-modal', 'true');
+            screen.innerHTML = '<div class="donate-card"><h2>Se você gostou, considere doar 1 real usando o QR code abaixo.</h2><img src="assets/doacao-qr.png" alt="QR code para doação de um real"><button type="button" class="donate-return">Voltar</button></div>';
+            document.body.appendChild(launch);
+            document.body.appendChild(screen);
+            launch.addEventListener('click', () => { screen.classList.add('is-open'); });
+            screen.querySelector('.donate-return').addEventListener('click', () => { screen.classList.remove('is-open'); });
           });
           </script>"""
           s = s.replace(chr(92) + "n</head>", chr(10) + "</head>")
