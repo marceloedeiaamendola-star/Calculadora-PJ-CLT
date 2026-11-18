@@ -80,6 +80,23 @@ jobs:
                 }
               }
             }
+            // Default PLR to one gross salary, while keeping the field editable.
+            const plrInput = Array.from(document.querySelectorAll('input')).find(input => {
+              const context = [
+                input.id, input.name, input.getAttribute('aria-label'),
+                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
+                input.parentElement ? input.parentElement.innerText : '',
+                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
+              ].join(' ');
+              return /PLR/i.test(context);
+            });
+            if (plrInput && (!plrInput.value || Number(plrInput.value.replace(',', '.')) === 0)) {
+              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+              setter.call(plrInput, '1');
+              plrInput.defaultValue = '1';
+              plrInput.dispatchEvent(new Event('input', { bubbles: true }));
+              plrInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             // Clear both CLT salary and PJ monthly billing defaults.
             for (const input of document.querySelectorAll('input')) {
               const context = [
