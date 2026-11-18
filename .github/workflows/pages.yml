@@ -26,6 +26,8 @@ jobs:
       - name: Restore site HTML
         run: |
           cat site/chunks/*.txt | base64 -d | gzip -d > index.html
+          mkdir -p assets
+          base64 -d assets/doacao-qr.png.b64 > assets/doacao-qr.png
       - name: Apply compact iPhone first-screen layout
         run: |
           python3 - <<'PY'
