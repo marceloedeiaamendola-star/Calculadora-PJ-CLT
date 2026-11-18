@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Restore site HTML
         run: |
-          base64 -d site/index.html.gz.b64 | gzip -d > index.html
+          cat site/chunks/*.txt | base64 -d | gzip -d > index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
