@@ -105,7 +105,7 @@ jobs:
                 input.parentElement ? input.parentElement.innerText : '',
                 input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
               ].join(' ');
-              if (/sal[aá]rio|faturamento/i.test(context)) {
+              if (!/PLR/i.test(context) && /sal[aá]rio|faturamento/i.test(context)) {
                 const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
                 setter.call(input, '');
                 input.defaultValue = '';
