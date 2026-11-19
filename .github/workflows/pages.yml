@@ -259,8 +259,6 @@ jobs:
               else if (/vale.?refei[cç][ãa]o|VR\\b/i.test(ctx)) assignControl(control, '1000');
               else if (/contabilidade/i.test(ctx)) assignControl(control, '300');
             }
-            for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
-
             const proLaboreControl = Array.from(document.querySelectorAll('input')).find(control => {
               const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || ''].join(' ');
               return /pr[oó][- ]?labore/i.test(ctx);
@@ -274,6 +272,8 @@ jobs:
                 proLaboreControl.dispatchEvent(new Event('change', { bubbles: true }));
               }
             }
+
+            for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
 
             function currencyValue(text) {
               const m = (text || '').match(/R\\$\\s*([\\d.]+,\\d{2})/);
