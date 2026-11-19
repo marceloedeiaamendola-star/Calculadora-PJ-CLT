@@ -339,13 +339,11 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           s = Path("index.html").read_text()
-          terms = ["Fator R", "renda líquida anual", "total econômico", "PLR anual", "faturamentoPJ", "fgts"]
-          for term in terms:
-              print("\\n###", term)
-              for m in list(re.finditer(re.escape(term), s, re.I))[:4]:
-                  print(s[max(0,m.start()-700):min(len(s),m.end()+1400)].replace("\\n", " "))
+          for term in ["function cltModel", "function pjModel", "function calcPJ", "function calculateResults", "function calculate()"]:
+              i=s.find(term)
+              print("\\n###", term, i)
+              if i >= 0: print(s[max(0,i-12000):min(len(s),i+16000)])
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
