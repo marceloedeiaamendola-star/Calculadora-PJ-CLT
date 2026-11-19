@@ -87,40 +87,6 @@ jobs:
                 }
               }
             }
-            // Default PLR to one gross salary, while keeping the field editable.
-            const plrInput = Array.from(document.querySelectorAll('input')).find(input => {
-              const context = [
-                input.id, input.name, input.getAttribute('aria-label'),
-                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
-                input.parentElement ? input.parentElement.innerText : '',
-                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
-              ].join(' ');
-              return /PLR/i.test(context);
-            });
-            if (plrInput && (!plrInput.value || Number(plrInput.value.replace(',', '.')) === 0)) {
-              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-              setter.call(plrInput, '1');
-              plrInput.defaultValue = '1';
-              plrInput.dispatchEvent(new Event('input', { bubbles: true }));
-              plrInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            // Clear both CLT salary and PJ monthly billing defaults.
-            for (const input of document.querySelectorAll('input')) {
-              const context = [
-                input.id, input.name, input.getAttribute('aria-label'), input.placeholder,
-                ...(input.labels ? Array.from(input.labels).map(x => x.textContent) : []),
-                input.parentElement ? input.parentElement.innerText : '',
-                input.parentElement && input.parentElement.parentElement ? input.parentElement.parentElement.innerText : ''
-              ].join(' ');
-              if (!/PLR/i.test(context) && /sal[aá]rio|faturamento/i.test(context)) {
-                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-                setter.call(input, '');
-                input.defaultValue = '';
-                input.removeAttribute('value');
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            }
             const labels = ['Comparação', 'Configuração PJ', 'Resultado', 'Memória'];
             for (const label of labels) {
               const el = Array.from(document.querySelectorAll('body *')).find(x => x.children.length === 0 && norm(x.textContent) === label);
@@ -233,47 +199,6 @@ jobs:
             });
             document.body.appendChild(restart);
 
-            function clearPJDefault() {
-              for (const control of document.querySelectorAll('input')) {
-                const ctx = [control.id, control.name, control.getAttribute('aria-label'), control.placeholder, ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
-                const value = norm(control.value).replace(/[^0-9,.-]/g, '').replace(',', '.');
-                const pjContext = /PJ|pessoa jur[ií]dica|faturamento/i.test(ctx);
-                if (((/sal[aá]rio|faturamento|receita/i.test(ctx)) && pjContext) || value === '12000') {
-                  if (control.value !== '') {
-                    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(control, '');
-                    control.removeAttribute('value');
-                    control.dispatchEvent(new Event('input', { bubbles: true }));
-                    control.dispatchEvent(new Event('change', { bubbles: true }));
-                  }
-                }
-              }
-            }
-            clearPJDefault();
-
-            // Apply defaults only to the field whose own label/identifier matches.
-            // Do not inspect broad ancestor text: that caused PLR to match every field in the form.
-            function preciseFieldText(control) {
-              const parts = [control.id, control.name, control.getAttribute('aria-label'), control.getAttribute('data-label'),
-                ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : [])];
-              const parent = control.parentElement;
-              if (parent) {
-                const direct = Array.from(parent.children).filter(el => el !== control).map(el => el.innerText || el.textContent || '');
-                parts.push(...direct);
-                if (parent.parentElement) {
-                  const siblings = Array.from(parent.parentElement.children).filter(el => el !== parent);
-                  parts.push(...siblings.map(el => el.querySelector('label')?.innerText || el.querySelector('[class*=label]')?.textContent || ''));
-                }
-              }
-              return norm(parts.join(' '));
-            }
-            for (const control of document.querySelectorAll('input,select,textarea')) {
-              const ctx = preciseFieldText(control);
-              if (/sal[aá]rio|faturamento|receita/i.test(ctx)) continue;
-              if (/\\bPLR\\b|participa[cç][ãa]o nos lucros/i.test(ctx)) assignControl(control, '1');
-              else if (/plano\\s*(de\\s*)?sa[uú]de|assist[eê]ncia\\s*m[eé]dica/i.test(ctx)) assignControl(control, '1000');
-              else if (/vale.?refei[cç][ãa]o|\\bVR\\b/i.test(ctx)) assignControl(control, '800');
-              else if (/contabilidade/i.test(ctx)) assignControl(control, '300');
-            }
             const proLaboreControl = Array.from(document.querySelectorAll('input')).find(control => {
               const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || ''].join(' ');
               return /pr[oó][- ]?labore/i.test(ctx);
@@ -290,44 +215,65 @@ jobs:
 
             for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
 
-            function currencyValue(text) {
-              const m = (text || '').match(/R\\$\\s*([\\d.]+,\\d{2})/);
-              return m ? Number(m[1].replace(/\\./g, '').replace(',', '.')) : null;
+            // Set defaults by stable IDs; avoid matching neighboring labels.
+            const defaults = { primaryAmount: '', plrSalaries: '1', meal: '800', health: '1000', accounting: '300', prolaborePct: '28' };
+            for (const [id, value] of Object.entries(defaults)) {
+              const control = document.getElementById(id);
+              if (control) assignControl(control, value);
             }
-            function metricCard(pattern) {
-              const candidates = Array.from(document.querySelectorAll('body *')).filter(el => el.children.length === 0 && pattern.test(norm(el.textContent)));
-              for (const label of candidates) {
-                let node = label;
-                for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
-                  const txt = norm(node.innerText);
-                  if (txt.length < 500 && /R\\$/.test(txt)) return node;
+
+            // Compare PJ net income against CLT economic total excluding FGTS.
+            // FGTS remains included and separately displayed in the CLT total.
+            const calcButton = document.getElementById('calculate');
+            if (calcButton) calcButton.addEventListener('click', function (event) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              const primary = num('primaryAmount');
+              const plrS = num('plrSalaries'), meal = num('meal'), health = num('health');
+              const months = num('months') || 11;
+              const params = { months, activityType: $('activityType').value, proPct: num('prolaborePct')/100,
+                accounting: num('accounting'), expenses: num('expenses'), meal, health,
+                rbt12Input: optionalNum('rbt12'), fs12Input: optionalNum('fs12'),
+                issPct: num('issPct') || 5, otherIncome: num('otherIncome'), otherTax: num('otherIncomeTax'),
+                regime: $('regime').value };
+              if (primary <= 0) { alert('Informe um valor maior que zero para iniciar a simulação.'); return; }
+              let clt, pj, equiv;
+              if (state.mode === 'clt-pj') {
+                clt = cltModel(primary, plrS, meal, health);
+                equiv = solvePJ(Math.max(0, clt.total - clt.fgts), params);
+                pj = pjModel(equiv, params);
+                $('equivCaption').textContent = 'Faturamento PJ mensal equivalente';
+                $('equivSub').textContent = 'Comparação sem somar o FGTS ao dinheiro disponível no PJ';
+              } else {
+                pj = pjModel(primary, params);
+                let lo = 0, hi = Math.max(pj.net, 10000);
+                for (let i = 0; i < 100; i++) {
+                  const mid = (lo + hi) / 2;
+                  const model = cltModel(mid, plrS, meal, health);
+                  if (model.total - model.fgts < pj.net) lo = mid; else hi = mid;
                 }
+                equiv = (lo + hi) / 2;
+                clt = cltModel(equiv, plrS, meal, health);
+                $('equivCaption').textContent = 'Salário bruto CLT mensal equivalente';
+                $('equivSub').textContent = 'Equivalência econômica sem FGTS';
               }
-              return null;
-            }
-            function includeFGTSInCLTEconomicTotal() {
-              const cltCard = metricCard(/total econ[oô]mico.*CLT|CLT.*total econ[oô]mico/i);
-              const fgtsCard = metricCard(/FGTS anual|total de FGTS|FGTS/i);
-              if (!cltCard || !fgtsCard) return;
-              const fgts = currencyValue(fgtsCard.innerText);
-              if (fgts === null) return;
-              if (!cltCard.dataset.cltpjBaseEconomic) {
-                const current = currencyValue(cltCard.innerText);
-                if (current === null) return;
-                cltCard.dataset.cltpjBaseEconomic = String(current);
-              }
-              const total = Number(cltCard.dataset.cltpjBaseEconomic) + fgts;
-              const leaves = Array.from(cltCard.querySelectorAll('*')).filter(el => el.children.length === 0 && /R\\$\\s*[\\d.]+,\\d{2}/.test(el.textContent));
-              const valueNode = leaves.sort((a,b) => a.textContent.length - b.textContent.length)[0];
-              if (valueNode) {
-                const formatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                if (norm(valueNode.textContent) !== formatted) valueNode.textContent = formatted;
-              }
-            }
-            const resultObserver = new MutationObserver(() => { clearPJDefault(); includeFGTSInCLTEconomicTotal(); });
-            resultObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
-            setTimeout(includeFGTSInCLTEconomicTotal, 400);
-            setTimeout(includeFGTSInCLTEconomicTotal, 1200);
+              $('equivalentValue').textContent = money(equiv);
+              state.result = { clt, pj, equiv };
+              $('resultDirection').textContent = state.mode === 'clt-pj' ? 'CLT → PJ' : 'PJ → CLT';
+              $('cltNet').textContent = money(clt.net);
+              $('pjNet').textContent = money(pj.net);
+              $('benefitsValue').textContent = money(clt.benefits);
+              $('fgtsValue').textContent = money(clt.fgts);
+              $('cltTotal').textContent = money(clt.total);
+              const chosen = pj.autoChoice ? `${pj.type} (${pj.autoChoice})` : pj.type;
+              const fr = pj.factorR === undefined || pj.factorR === null ? '' : ` Fator R: ${(pj.factorR*100).toFixed(1).replace('.', ',')}%.`;
+              const warning = pj.eligibilityWarning ? ` ${pj.eligibilityWarning}` : '';
+              $('differenceNote').innerHTML = `<b>Leitura do resultado</b><p>Regime simulado: ${chosen}.${fr} A renda PJ já desconta o custo estimado de reposição de VR e plano de saúde. O FGTS integra o total econômico CLT, mas não é tratado como dinheiro disponível para equivalência PJ.${warning}</p>`;
+              renderBreakdown(clt, pj);
+              go(3);
+            }, true);
+
+            for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
           });
           </script>"""
           s = s.replace(chr(92) + "n</head>", chr(10) + "</head>")
