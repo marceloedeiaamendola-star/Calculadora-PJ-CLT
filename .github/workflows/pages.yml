@@ -48,7 +48,8 @@ jobs:
             .mobile-hero .mobile-kicker { display: none !important; }
             .mobile-step { padding: 9px 5px !important; min-height: 0 !important; border-radius: 15px !important; }
             .mobile-step * { font-size: .78rem !important; line-height: 1.12 !important; }
-            button, input, select, textarea { font-size: .9rem !important; }
+            button { font-size: .9rem !important; }
+            input, select, textarea { font-size: 16px !important; }
           }
           .donate-launch { position: fixed; right: 14px; bottom: 18px; z-index: 9998; border: 0; border-radius: 999px; padding: 12px 18px; background: #173454; color: white; font: 600 15px system-ui,sans-serif; box-shadow: 0 4px 18px #0003; }
           .donate-screen { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 22px; background: #f4f6f9; color: #172b46; font-family: system-ui,sans-serif; text-align: center; }
@@ -214,6 +215,33 @@ jobs:
             }
 
             for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
+
+            // Require a positive salary / billing amount before leaving the first screen.
+            const primaryAmount = document.getElementById('primaryAmount');
+            if (primaryAmount) {
+              primaryAmount.required = true;
+              primaryAmount.setAttribute('aria-required', 'true');
+              primaryAmount.setAttribute('inputmode', 'decimal');
+              primaryAmount.addEventListener('input', () => {
+                primaryAmount.setCustomValidity('');
+              });
+            }
+            const nextToConfig = document.getElementById('toStep2');
+            if (nextToConfig) nextToConfig.addEventListener('click', function (event) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              const value = Number(primaryAmount?.value);
+              if (!primaryAmount || !primaryAmount.value.trim() || !Number.isFinite(value) || value <= 0) {
+                if (primaryAmount) {
+                  primaryAmount.setCustomValidity('Informe um valor maior que zero para continuar.');
+                  primaryAmount.reportValidity();
+                  primaryAmount.focus();
+                }
+                return;
+              }
+              primaryAmount.setCustomValidity('');
+              go(2);
+            }, true);
 
             // Keep the amount blank when switching comparison direction.
             document.querySelectorAll('.segmented [data-mode]').forEach(button => {
