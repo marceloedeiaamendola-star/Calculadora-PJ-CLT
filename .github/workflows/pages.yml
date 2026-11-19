@@ -215,6 +215,21 @@ jobs:
 
             for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
 
+            // Keep the amount blank when switching comparison direction.
+            document.querySelectorAll('.segmented [data-mode]').forEach(button => {
+              button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                state.mode = button.dataset.mode;
+                document.querySelectorAll('.segmented [data-mode]').forEach(item => item.classList.toggle('selected', item === button));
+                $('primaryLabel').textContent = state.mode === 'clt-pj' ? 'Salário bruto CLT mensal' : 'Faturamento PJ mensal';
+                $('modeHint').textContent = state.mode === 'clt-pj'
+                  ? 'Descubra quanto precisa faturar como PJ para equivaler à sua remuneração CLT.'
+                  : 'Descubra qual salário CLT equivale ao seu faturamento PJ.';
+                $('primaryAmount').value = '';
+              }, true);
+            });
+
             // Set defaults by stable IDs; avoid matching neighboring labels.
             const defaults = { primaryAmount: '', plrSalaries: '1', meal: '800', health: '1000', accounting: '300', prolaborePct: '28' };
             for (const [id, value] of Object.entries(defaults)) {
