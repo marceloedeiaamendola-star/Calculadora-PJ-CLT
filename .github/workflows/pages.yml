@@ -206,22 +206,29 @@ jobs:
             restart.type = 'button';
             restart.id = 'cltpj-restart';
             restart.textContent = '↺ Reiniciar';
+            const suggestedDefaults = new Map();
+            function controlContext(control) {
+              return [control.id, control.name, control.getAttribute('aria-label'), control.placeholder,
+                ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''),
+                control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '',
+                control.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
+            }
+            function assignControl(control, value) {
+              const proto = control.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : control.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+              const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+              if (setter) setter.call(control, String(value)); else control.value = String(value);
+              control.dispatchEvent(new Event('input', { bubbles: true }));
+              control.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             restart.addEventListener('click', () => {
               document.querySelectorAll('form').forEach(form => form.reset());
-              document.querySelectorAll('input,select,textarea').forEach(control => {
-                const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
-                const proto = control.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : control.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-                const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-                if (/sal[aá]rio|faturamento|receita/i.test(ctx)) { if (setter) setter.call(control, ''); else control.value = ''; control.removeAttribute('value'); }
-                if (/PLR/i.test(ctx)) { if (setter) setter.call(control, '1'); else control.value = '1'; }
-                if (/pr[oó][- ]?labore/i.test(ctx)) { if (setter) setter.call(control, '28'); else control.value = '28'; }
-                control.dispatchEvent(new Event('input', { bubbles: true }));
-                control.dispatchEvent(new Event('change', { bubbles: true }));
-              });
-              const firstStep = Array.from(document.querySelectorAll('button,[role="button"],a')).find(el => /^(1\\s*)?compara[çc][ãa]o$/i.test(norm(el.innerText || el.textContent)));
-              if (firstStep) firstStep.click();
+              for (const control of document.querySelectorAll('input,select,textarea')) {
+                if (suggestedDefaults.has(control)) assignControl(control, suggestedDefaults.get(control));
+              }
               setConfigMode('simple');
               screen.classList.remove('is-open');
+              const firstStep = Array.from(document.querySelectorAll('button,[role="button"],a')).find(el => /^(1\\s*)?compara[çc][ãa]o$/i.test(norm(el.innerText || el.textContent)));
+              if (firstStep) firstStep.click();
               window.scrollTo({ top: 0, behavior: 'smooth' });
             });
             document.body.appendChild(restart);
@@ -242,6 +249,17 @@ jobs:
               }
             }
             clearPJDefault();
+
+            // Restore the editable suggested values that were part of the initial calculator.
+            // Salary and PJ billing intentionally remain blank.
+            for (const control of document.querySelectorAll('input,select,textarea')) {
+              const ctx = controlContext(control);
+              if (/PLR/i.test(ctx)) assignControl(control, '1');
+              else if (/plano\\s*(de\\s*)?sa[uú]de|assist[eê]ncia\\s*m[eé]dica/i.test(ctx)) assignControl(control, '800');
+              else if (/vale.?refei[cç][ãa]o|VR\\b/i.test(ctx)) assignControl(control, '1000');
+              else if (/contabilidade/i.test(ctx)) assignControl(control, '300');
+            }
+            for (const control of document.querySelectorAll('input,select,textarea')) suggestedDefaults.set(control, control.value);
 
             const proLaboreControl = Array.from(document.querySelectorAll('input')).find(control => {
               const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || ''].join(' ');
