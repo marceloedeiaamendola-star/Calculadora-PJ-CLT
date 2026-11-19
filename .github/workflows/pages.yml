@@ -250,13 +250,28 @@ jobs:
             }
             clearPJDefault();
 
-            // Restore the editable suggested values that were part of the initial calculator.
-            // Salary and PJ billing intentionally remain blank.
+            // Apply defaults only to the field whose own label/identifier matches.
+            // Do not inspect broad ancestor text: that caused PLR to match every field in the form.
+            function preciseFieldText(control) {
+              const parts = [control.id, control.name, control.getAttribute('aria-label'), control.getAttribute('data-label'),
+                ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : [])];
+              const parent = control.parentElement;
+              if (parent) {
+                const direct = Array.from(parent.children).filter(el => el !== control).map(el => el.innerText || el.textContent || '');
+                parts.push(...direct);
+                if (parent.parentElement) {
+                  const siblings = Array.from(parent.parentElement.children).filter(el => el !== parent);
+                  parts.push(...siblings.map(el => el.querySelector('label')?.innerText || el.querySelector('[class*=label]')?.textContent || ''));
+                }
+              }
+              return norm(parts.join(' '));
+            }
             for (const control of document.querySelectorAll('input,select,textarea')) {
-              const ctx = controlContext(control);
-              if (/PLR/i.test(ctx)) assignControl(control, '1');
+              const ctx = preciseFieldText(control);
+              if (/sal[aá]rio|faturamento|receita/i.test(ctx)) continue;
+              if (/\\bPLR\\b|participa[cç][ãa]o nos lucros/i.test(ctx)) assignControl(control, '1');
               else if (/plano\\s*(de\\s*)?sa[uú]de|assist[eê]ncia\\s*m[eé]dica/i.test(ctx)) assignControl(control, '1000');
-              else if (/vale.?refei[cç][ãa]o|VR\\b/i.test(ctx)) assignControl(control, '800');
+              else if (/vale.?refei[cç][ãa]o|\\bVR\\b/i.test(ctx)) assignControl(control, '800');
               else if (/contabilidade/i.test(ctx)) assignControl(control, '300');
             }
             const proLaboreControl = Array.from(document.querySelectorAll('input')).find(control => {
