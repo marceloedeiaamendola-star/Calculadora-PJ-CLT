@@ -165,7 +165,7 @@ jobs:
             } else {
               document.body.insertBefore(modeBar, document.body.firstChild);
             }
-            const advancedPattern = /munic[ií]pio|cnae|fator\\s*r|receita\\s*(bruta\\s*)?(acumulada|12\\s*meses)|rbt12|folha\\s*(de\\s*)?(pagamento|sal[aá]rios)|anexo\\s*(iii|iv|v)|hist[oó]rico\\s*(de\\s*)?(faturamento|receita)/i;
+            const advancedPattern = /pr[oó][- ]?labore|munic[ií]pio|cnae|fator\\s*r|receita\\s*(bruta\\s*)?(acumulada|12\\s*meses)|rbt12|folha\\s*(de\\s*)?(pagamento|sal[aá]rios)|anexo\\s*(iii|iv|v)|hist[oó]rico\\s*(de\\s*)?(faturamento|receita)/i;
             const fieldBlocks = [];
             for (const control of document.querySelectorAll('input, select, textarea')) {
               const labelText = [
@@ -231,7 +231,7 @@ jobs:
                 const ctx = [control.id, control.name, control.getAttribute('aria-label'), control.placeholder, ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
                 const value = norm(control.value).replace(/[^0-9,.-]/g, '').replace(',', '.');
                 const pjContext = /PJ|pessoa jur[ií]dica|faturamento/i.test(ctx);
-                if (((/sal[aá]rio|faturamento|receita/i.test(ctx)) && pjContext) || (value === '12000' && pjContext)) {
+                if (((/sal[aá]rio|faturamento|receita/i.test(ctx)) && pjContext) || value === '12000') {
                   if (control.value !== '') {
                     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(control, '');
                     control.removeAttribute('value');
