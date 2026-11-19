@@ -63,6 +63,7 @@ jobs:
           #cltpj-mode-switch button { flex: 1; border: 1px solid #b9c8d8; border-radius: 10px; padding: 10px 8px; background: #f4f7fb; color: #173454; font-size: 14px; font-weight: 650; }
           #cltpj-mode-switch button.active { background: #173454; border-color: #173454; color: white; }
           #cltpj-mode-switch .mode-hint { margin-top: 8px; color: #617187; font-size: 11px; line-height: 1.35; }
+          #cltpj-restart { position: fixed; left: 14px; bottom: 18px; z-index: 9998; border: 1px solid #cbd6e2; border-radius: 999px; padding: 11px 16px; background: #fff; color: #173454; font: 650 14px system-ui,sans-serif; box-shadow: 0 4px 18px #0002; }
           </style>"""
           script = """<script id="iphone-compact-layout-script">
           document.addEventListener('DOMContentLoaded', function () {
@@ -200,6 +201,97 @@ jobs:
             }
             modeBar.querySelectorAll('button[data-mode]').forEach(btn => btn.addEventListener('click', () => setConfigMode(btn.dataset.mode)));
             setConfigMode('simple');
+
+            const restart = document.createElement('button');
+            restart.type = 'button';
+            restart.id = 'cltpj-restart';
+            restart.textContent = '↺ Reiniciar';
+            restart.addEventListener('click', () => {
+              document.querySelectorAll('form').forEach(form => form.reset());
+              document.querySelectorAll('input,select,textarea').forEach(control => {
+                const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
+                const proto = control.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : control.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+                const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+                if (/sal[aá]rio|faturamento|receita/i.test(ctx)) { if (setter) setter.call(control, ''); else control.value = ''; control.removeAttribute('value'); }
+                if (/PLR/i.test(ctx)) { if (setter) setter.call(control, '1'); else control.value = '1'; }
+                if (/pr[oó][- ]?labore/i.test(ctx)) { if (setter) setter.call(control, '28'); else control.value = '28'; }
+                control.dispatchEvent(new Event('input', { bubbles: true }));
+                control.dispatchEvent(new Event('change', { bubbles: true }));
+              });
+              const firstStep = Array.from(document.querySelectorAll('button,[role="button"],a')).find(el => /^(1\\s*)?compara[çc][ãa]o$/i.test(norm(el.innerText || el.textContent)));
+              if (firstStep) firstStep.click();
+              setConfigMode('simple');
+              screen.classList.remove('is-open');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            document.body.appendChild(restart);
+
+            function clearPJDefault() {
+              for (const control of document.querySelectorAll('input')) {
+                const ctx = [control.id, control.name, control.getAttribute('aria-label'), control.placeholder, ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.innerText || '', control.parentElement?.parentElement?.parentElement?.parentElement?.innerText || ''].join(' ');
+                const value = norm(control.value).replace(/[^0-9,.-]/g, '').replace(',', '.');
+                const pjContext = /PJ|pessoa jur[ií]dica|faturamento/i.test(ctx);
+                if (((/sal[aá]rio|faturamento|receita/i.test(ctx)) && pjContext) || (value === '12000' && pjContext)) {
+                  if (control.value !== '') {
+                    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(control, '');
+                    control.removeAttribute('value');
+                    control.dispatchEvent(new Event('input', { bubbles: true }));
+                    control.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
+                }
+              }
+            }
+            clearPJDefault();
+
+            const proLaboreControl = Array.from(document.querySelectorAll('input')).find(control => {
+              const ctx = [control.id, control.name, control.getAttribute('aria-label'), ...(control.labels ? Array.from(control.labels).map(l => l.textContent) : ''), control.parentElement?.innerText || '', control.parentElement?.parentElement?.innerText || ''].join(' ');
+              return /pr[oó][- ]?labore/i.test(ctx);
+            });
+            if (proLaboreControl) {
+              const ctx = [proLaboreControl.id, proLaboreControl.name, proLaboreControl.getAttribute('aria-label'), ...(proLaboreControl.labels ? Array.from(proLaboreControl.labels).map(l => l.textContent) : ''), proLaboreControl.parentElement?.innerText || '', proLaboreControl.parentElement?.parentElement?.innerText || ''].join(' ');
+              const current = Number(norm(proLaboreControl.value).replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0;
+              if (/%|percentual|percent/i.test(ctx) || current <= 100) {
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(proLaboreControl, '28');
+                proLaboreControl.dispatchEvent(new Event('input', { bubbles: true }));
+                proLaboreControl.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+
+            function currencyValue(text) {
+              const m = (text || '').match(/R\\$\\s*([\\d.]+,\\d{2})/);
+              return m ? Number(m[1].replace(/\\./g, '').replace(',', '.')) : null;
+            }
+            function metricCard(pattern) {
+              const candidates = Array.from(document.querySelectorAll('body *')).filter(el => el.children.length === 0 && pattern.test(norm(el.textContent)));
+              for (const label of candidates) {
+                let node = label;
+                for (let i = 0; i < 5 && node; i++, node = node.parentElement) {
+                  const txt = norm(node.innerText);
+                  if (txt.length < 500 && /R\\$/.test(txt)) return node;
+                }
+              }
+              return null;
+            }
+            function correctEconomicPJ() {
+              const cltCard = metricCard(/total econ[oô]mico.*CLT|CLT.*total econ[oô]mico/i);
+              const pjCard = metricCard(/total econ[oô]mico.*PJ|PJ.*total econ[oô]mico/i);
+              const fgtsCard = metricCard(/FGTS anual|total de FGTS|FGTS/i);
+              if (!cltCard || !pjCard || !fgtsCard) return;
+              const clt = currencyValue(cltCard.innerText);
+              const fgts = currencyValue(fgtsCard.innerText);
+              if (clt === null || fgts === null) return;
+              const target = Math.max(0, clt - fgts);
+              const leaves = Array.from(pjCard.querySelectorAll('*')).filter(el => el.children.length === 0 && /R\\$\\s*[\\d.]+,\\d{2}/.test(el.textContent));
+              const valueNode = leaves.sort((a,b) => a.textContent.length - b.textContent.length)[0];
+              if (valueNode) {
+                const formatted = target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                if (norm(valueNode.textContent) !== formatted) valueNode.textContent = formatted;
+              }
+            }
+            const resultObserver = new MutationObserver(() => { clearPJDefault(); correctEconomicPJ(); });
+            resultObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+            setTimeout(correctEconomicPJ, 400);
+            setTimeout(correctEconomicPJ, 1200);
           });
           </script>"""
           s = s.replace(chr(92) + "n</head>", chr(10) + "</head>")
