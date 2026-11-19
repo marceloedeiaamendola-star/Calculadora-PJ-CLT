@@ -335,16 +335,6 @@ jobs:
           s = s.replace("</head>", style + chr(10) + "</head>", 1) if "</head>" in s else style + s
           s = s.replace("</body>", script + chr(10) + "</body>", 1) if "</body>" in s else s + script
           p.write_text(s)
-      - name: Inspect original calculator calculation code
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          s = Path("index.html").read_text()
-          for term in ["function cltModel", "function pjModel", "function calcPJ", "function calculateResults", "function calculate()"]:
-              i=s.find(term)
-              print("\\n###", term, i)
-              if i >= 0: print(s[max(0,i-12000):min(len(s),i+16000)])
-          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
