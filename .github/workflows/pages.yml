@@ -36,10 +36,10 @@ jobs:
           p = Path("index.html")
           s = p.read_text()
           s = re.sub(r"""<link[^>]+rel=["']apple-touch-icon["'][^>]*>""", "", s, flags=re.I)
-          tags = '<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">\\n<meta name="apple-mobile-web-app-title" content="CLT-PJ">'
+          tags = '<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">' + chr(10) + '<meta name="apple-mobile-web-app-title" content="CLT-PJ">'
           if "</head>" not in s:
               raise SystemExit("Não foi encontrado </head> no index.html")
-          s = s.replace("</head>", tags + "\\n</head>", 1)
+          s = s.replace("</head>", tags + chr(10) + "</head>", 1)
           p.write_text(s)
           PY
       - name: Apply compact iPhone first-screen layout
